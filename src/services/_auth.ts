@@ -25,20 +25,6 @@ export const getProviderAuthPayload = (provider: string) => {
       };
     }
 
-    case ModelProvider.SenseNova: {
-      const { sensenovaAccessKeyID, sensenovaAccessKeySecret } = keyVaultsConfigSelectors.sensenovaConfig(
-        useUserStore.getState(),
-      );
-
-      const apiKey = (sensenovaAccessKeyID || '') + ':' + (sensenovaAccessKeySecret || '')
-
-      return { 
-        apiKey,
-        sensenovaAccessKeyID: sensenovaAccessKeyID, 
-        sensenovaAccessKeySecret: sensenovaAccessKeySecret, 
-      };
-    }
-
     case ModelProvider.Wenxin: {
       const { secretKey, accessKey } = keyVaultsConfigSelectors.wenxinConfig(
         useUserStore.getState(),
@@ -69,6 +55,15 @@ export const getProviderAuthPayload = (provider: string) => {
       return { endpoint: config?.baseURL };
     }
 
+    case ModelProvider.Cloudflare: {
+      const config = keyVaultsConfigSelectors.cloudflareConfig(useUserStore.getState());
+
+      return {
+        apiKey: config?.apiKey,
+        cloudflareBaseURLOrAccountID: config?.baseURLOrAccountID,
+      };
+    }
+
     default: {
       const config = keyVaultsConfigSelectors.getVaultByProvider(provider as GlobalLLMProviderKey)(
         useUserStore.getState(),
@@ -83,7 +78,7 @@ const createAuthTokenWithPayload = async (payload = {}) => {
   const accessCode = keyVaultsConfigSelectors.password(useUserStore.getState());
   const userId = userProfileSelectors.userId(useUserStore.getState());
 
-  return await createJWT<JWTPayload>({ accessCode, userId, ...payload });
+  return createJWT<JWTPayload>({ accessCode, userId, ...payload });
 };
 
 interface AuthParams {

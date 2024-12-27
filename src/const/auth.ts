@@ -37,11 +37,10 @@ export interface JWTPayload {
   awsSecretAccessKey?: string;
   awsSessionToken?: string;
 
+  cloudflareBaseURLOrAccountID?: string;
+
   wenxinAccessKey?: string;
   wenxinSecretKey?: string;
-
-  sensenovaAccessKeyID?: string;
-  sensenovaAccessKeySecret?: string;
 
   /**
    * user id

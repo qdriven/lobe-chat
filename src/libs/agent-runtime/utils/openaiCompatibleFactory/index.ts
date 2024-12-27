@@ -2,17 +2,18 @@ import OpenAI, { ClientOptions } from 'openai';
 import { Stream } from 'openai/streaming';
 
 import { LOBE_DEFAULT_MODEL_LIST } from '@/config/modelProviders';
-import { ChatModelCard } from '@/types/llm';
+import type { ChatModelCard } from '@/types/llm';
 
 import { LobeRuntimeAI } from '../../BaseAI';
 import { AgentRuntimeErrorType, ILobeAgentRuntimeErrorType } from '../../error';
-import {
+import type {
   ChatCompetitionOptions,
   ChatCompletionErrorPayload,
   ChatStreamPayload,
   Embeddings,
   EmbeddingsOptions,
   EmbeddingsPayload,
+  ModelProvider,
   TextToImagePayload,
   TextToSpeechOptions,
   TextToSpeechPayload,
@@ -26,7 +27,7 @@ import { StreamingResponse } from '../response';
 import { OpenAIStream, OpenAIStreamOptions } from '../streams';
 
 // the model contains the following keywords is not a chat model, so we should filter them out
-const CHAT_MODELS_BLOCK_LIST = [
+export const CHAT_MODELS_BLOCK_LIST = [
   'embedding',
   'davinci',
   'curie',
@@ -50,6 +51,7 @@ export interface CustomClientOptions<T extends Record<string, any> = any> {
 }
 
 interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = any> {
+  apiKey?: string;
   baseURL?: string;
   chatCompletion?: {
     handleError?: (
@@ -76,7 +78,7 @@ interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = any> {
     invalidAPIKey: ILobeAgentRuntimeErrorType;
   };
   models?:
-    | ((params: { apiKey: string }) => Promise<ChatModelCard[]>)
+    | ((params: { client: OpenAI }) => Promise<ChatModelCard[]>)
     | {
         transformModel?: (model: OpenAI.Model) => ChatModelCard;
       };
@@ -139,6 +141,7 @@ export function transformResponseToStream(data: OpenAI.ChatCompletion) {
 export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>({
   provider,
   baseURL: DEFAULT_BASE_URL,
+  apiKey: DEFAULT_API_LEY,
   errorType,
   debug,
   constructorOptions,
@@ -155,10 +158,14 @@ export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>
     client!: OpenAI;
 
     baseURL!: string;
-    private _options: ConstructorOptions<T>;
+    protected _options: ConstructorOptions<T>;
 
     constructor(options: ClientOptions & Record<string, any> = {}) {
-      const _options = { ...options, baseURL: options.baseURL?.trim() || DEFAULT_BASE_URL };
+      const _options = {
+        ...options,
+        apiKey: options.apiKey?.trim() || DEFAULT_API_LEY,
+        baseURL: options.baseURL?.trim() || DEFAULT_BASE_URL,
+      };
       const { apiKey, baseURL = DEFAULT_BASE_URL, ...res } = _options;
       this._options = _options as ConstructorOptions<T>;
 
@@ -205,7 +212,7 @@ export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>
             },
             {
               // https://github.com/lobehub/lobe-chat/pull/318
-              headers: { Accept: '*/*' },
+              headers: { Accept: '*/*', ...options?.requestHeaders },
               signal: options?.signal,
             },
           );
@@ -243,7 +250,7 @@ export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>
     }
 
     async models() {
-      if (typeof models === 'function') return models({ apiKey: this.client.apiKey });
+      if (typeof models === 'function') return models({ client: this.client });
 
       const list = await this.client.models.list();
 
@@ -306,7 +313,7 @@ export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>
       }
     }
 
-    private handleError(error: any): ChatCompletionErrorPayload {
+    protected handleError(error: any): ChatCompletionErrorPayload {
       let desensitizedEndpoint = this.baseURL;
 
       // refs: https://github.com/lobehub/lobe-chat/issues/842
@@ -331,7 +338,7 @@ export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>
               endpoint: desensitizedEndpoint,
               error: error as any,
               errorType: ErrorType.invalidAPIKey,
-              provider: provider as any,
+              provider: provider as ModelProvider,
             });
           }
 
@@ -347,7 +354,7 @@ export const LobeOpenAICompatibleFactory = <T extends Record<string, any> = any>
         endpoint: desensitizedEndpoint,
         error: errorResult,
         errorType: RuntimeError || ErrorType.bizError,
-        provider: provider as any,
+        provider: provider as ModelProvider,
       });
     }
   };

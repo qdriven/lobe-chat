@@ -4,6 +4,10 @@ export type ModelPriceCurrency = 'CNY' | 'USD';
 
 export interface ChatModelCard {
   /**
+   * the context window (or input + output tokens limit)
+   */
+  contextWindowTokens?: number;
+  /**
    * only used in azure
    */
   deploymentName?: string;
@@ -12,7 +16,6 @@ export interface ChatModelCard {
    * the name show for end user
    */
   displayName?: string;
-
   /**
    * whether model is enabled by default
    */
@@ -53,10 +56,6 @@ export interface ChatModelCard {
     writeCacheInput?: number;
   };
   releasedAt?: string;
-  /**
-   * the context window (or input + output tokens limit)
-   */
-  tokens?: number;
 
   /**
    *  whether model supports vision
@@ -122,6 +121,10 @@ export interface ModelProviderCard {
    * so provider like ollama don't need api key field
    */
   showApiKey?: boolean;
+  /**
+   * whether show checker in the provider config
+   */
+  showChecker?: boolean;
   /**
    * whether to smoothing the output
    */

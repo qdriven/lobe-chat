@@ -16,9 +16,9 @@ export interface AWSBedrockKeyVault {
   sessionToken?: string;
 }
 
-export interface SenseNovaKeyVault {
-  sensenovaAccessKeyID?: string;
-  sensenovaAccessKeySecret?: string;
+export interface CloudflareKeyVault {
+  apiKey?: string;
+  baseURLOrAccountID?: string;
 }
 
 export interface WenxinKeyVault {
@@ -33,13 +33,17 @@ export interface UserKeyVaults {
   azure?: AzureOpenAIKeyVault;
   baichuan?: OpenAICompatibleKeyVault;
   bedrock?: AWSBedrockKeyVault;
+  cloudflare?: CloudflareKeyVault;
   deepseek?: OpenAICompatibleKeyVault;
   fireworksai?: OpenAICompatibleKeyVault;
+  giteeai?: OpenAICompatibleKeyVault;
   github?: OpenAICompatibleKeyVault;
   google?: OpenAICompatibleKeyVault;
   groq?: OpenAICompatibleKeyVault;
+  higress?: OpenAICompatibleKeyVault;
   huggingface?: OpenAICompatibleKeyVault;
   hunyuan?: OpenAICompatibleKeyVault;
+  internlm?: OpenAICompatibleKeyVault;
   lobehub?: any;
   minimax?: OpenAICompatibleKeyVault;
   mistral?: OpenAICompatibleKeyVault;
@@ -51,7 +55,7 @@ export interface UserKeyVaults {
   password?: string;
   perplexity?: OpenAICompatibleKeyVault;
   qwen?: OpenAICompatibleKeyVault;
-  sensenova?: SenseNovaKeyVault;
+  sensenova?: OpenAICompatibleKeyVault;
   siliconcloud?: OpenAICompatibleKeyVault;
   spark?: OpenAICompatibleKeyVault;
   stepfun?: OpenAICompatibleKeyVault;
@@ -59,6 +63,7 @@ export interface UserKeyVaults {
   togetherai?: OpenAICompatibleKeyVault;
   upstage?: OpenAICompatibleKeyVault;
   wenxin?: WenxinKeyVault;
+  xai?: OpenAICompatibleKeyVault;
   zeroone?: OpenAICompatibleKeyVault;
   zhipu?: OpenAICompatibleKeyVault;
 }
