@@ -16,7 +16,8 @@ export type AiModelType =
   | 'stt'
   | 'image'
   | 'text2video'
-  | 'text2music';
+  | 'text2music'
+  | 'realtime';
 
 export interface ModelAbilities {
   /**
@@ -28,6 +29,18 @@ export interface ModelAbilities {
    */
   functionCall?: boolean;
   /**
+   * whether model supports image output
+   */
+  imageOutput?: boolean;
+  /**
+   * whether model supports reasoning
+   */
+  reasoning?: boolean;
+  /**
+   * whether model supports search web
+   */
+  search?: boolean;
+  /**
    *  whether model supports vision
    */
   vision?: boolean;
@@ -36,6 +49,7 @@ export interface ModelAbilities {
 const AiModelAbilitiesSchema = z.object({
   // files: z.boolean().optional(),
   functionCall: z.boolean().optional(),
+  reasoning: z.boolean().optional(),
   vision: z.boolean().optional(),
 });
 
@@ -91,7 +105,7 @@ export interface ChatModelPricing extends BasicModelPricing {
   writeCacheInput?: number;
 }
 
-interface AIBaseModelCard {
+export interface AIBaseModelCard {
   /**
    * the context window (or input + output tokens limit)
    */
@@ -115,27 +129,37 @@ interface AIBaseModelCard {
   releasedAt?: string;
 }
 
-export interface AIChatModelCard extends AIBaseModelCard {
-  abilities?: {
-    /**
-     * whether model supports file upload
-     */
-    files?: boolean;
-    /**
-     * whether model supports function call
-     */
-    functionCall?: boolean;
-    /**
-     *  whether model supports vision
-     */
-    vision?: boolean;
-  };
+export interface AiModelConfig {
   /**
-   * used in azure and doubao
+   * used in azure and volcengine
    */
   deploymentName?: string;
+
+  /**
+   * qwen series model enabled search
+   */
+  enabledSearch?: boolean;
+}
+
+export type ModelSearchImplementType = 'tool' | 'params' | 'internal';
+
+export type ExtendParamsType = 'reasoningBudgetToken' | 'enableReasoning' | 'disableContextCaching';
+
+export interface AiModelSettings {
+  extendParams?: ExtendParamsType[];
+  /**
+   * 模型层实现搜索的方式
+   */
+  searchImpl?: ModelSearchImplementType;
+  searchProvider?: string;
+}
+
+export interface AIChatModelCard extends AIBaseModelCard {
+  abilities?: ModelAbilities;
+  config?: AiModelConfig;
   maxOutput?: number;
   pricing?: ChatModelPricing;
+  settings?: AiModelSettings;
   type: 'chat';
 }
 
@@ -208,17 +232,37 @@ export interface AIRealtimeModelCard extends AIBaseModelCard {
      */
     functionCall?: boolean;
     /**
+     *  whether model supports reasoning
+     */
+    reasoning?: boolean;
+    /**
      *  whether model supports vision
      */
     vision?: boolean;
   };
   /**
-   * used in azure and doubao
+   * used in azure and volcengine
    */
   deploymentName?: string;
   maxOutput?: number;
   pricing?: ChatModelPricing;
   type: 'realtime';
+}
+
+export interface AiFullModelCard extends AIBaseModelCard {
+  abilities?: ModelAbilities;
+  config?: AiModelConfig;
+  contextWindowTokens?: number;
+  displayName?: string;
+  id: string;
+  maxDimension?: number;
+  pricing?: ChatModelPricing;
+  type: AiModelType;
+}
+
+export interface LobeDefaultAiModelListItem extends AiFullModelCard {
+  abilities: ModelAbilities;
+  providerId: string;
 }
 
 // create
@@ -241,12 +285,14 @@ export type CreateAiModelParams = z.infer<typeof CreateAiModelSchema>;
 
 export interface AiProviderModelListItem {
   abilities?: ModelAbilities;
+  config?: AiModelConfig;
   contextWindowTokens?: number;
   displayName?: string;
   enabled: boolean;
   id: string;
   pricing?: ChatModelPricing;
   releasedAt?: string;
+  settings?: AiModelSettings;
   source?: AiModelSourceType;
   type: AiModelType;
 }
@@ -254,8 +300,13 @@ export interface AiProviderModelListItem {
 // Update
 export const UpdateAiModelSchema = z.object({
   abilities: AiModelAbilitiesSchema.optional(),
-  contextWindowTokens: z.number().optional(),
-  displayName: z.string().optional(),
+  config: z
+    .object({
+      deploymentName: z.string().optional(),
+    })
+    .optional(),
+  contextWindowTokens: z.number().nullable().optional(),
+  displayName: z.string().nullable().optional(),
 });
 
 export type UpdateAiModelParams = z.infer<typeof UpdateAiModelSchema>;
@@ -273,3 +324,25 @@ export const ToggleAiModelEnableSchema = z.object({
 });
 
 export type ToggleAiModelEnableParams = z.infer<typeof ToggleAiModelEnableSchema>;
+
+//
+
+export interface AiModelForSelect {
+  abilities: ModelAbilities;
+  contextWindowTokens?: number;
+  displayName?: string;
+  id: string;
+}
+
+export interface EnabledAiModel {
+  abilities: ModelAbilities;
+  config?: AiModelConfig;
+  contextWindowTokens?: number;
+  displayName?: string;
+  enabled?: boolean;
+  id: string;
+  providerId: string;
+  settings?: AiModelSettings;
+  sort?: number;
+  type: AiModelType;
+}

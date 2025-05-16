@@ -5,6 +5,7 @@ import { DEFAULT_LANG, isLocaleNotSupport } from '@/const/locale';
 import { Locales, normalizeLocale } from '@/locales/resources';
 import { EdgeConfig } from '@/server/modules/EdgeConfig';
 import { AgentStoreIndex } from '@/types/discover';
+import { RevalidateTag } from '@/types/requestCache';
 
 export class AssistantStore {
   private readonly baseUrl: string;
@@ -25,37 +26,59 @@ export class AssistantStore {
     return urlJoin(this.baseUrl, `${identifier}.${normalizeLocale(lang)}.json`);
   };
 
-  getAgentIndex = async (locale: Locales = DEFAULT_LANG, revalidate?: number) => {
+  getAgentIndex = async (
+    locale: Locales = DEFAULT_LANG,
+    revalidate?: number,
+  ): Promise<AgentStoreIndex> => {
     try {
       let res: Response;
 
-      res = await fetch(this.getAgentIndexUrl(locale as any), { next: { revalidate } });
+      res = await fetch(this.getAgentIndexUrl(locale as any), {
+        next: { revalidate, tags: [RevalidateTag.AgentIndex] },
+      });
 
       if (res.status === 404) {
-        res = await fetch(this.getAgentIndexUrl(DEFAULT_LANG), { next: { revalidate } });
+        res = await fetch(this.getAgentIndexUrl(DEFAULT_LANG), {
+          next: { revalidate, tags: [RevalidateTag.AgentIndex] },
+        });
       }
 
       if (!res.ok) {
-        console.error('fetch agent index error:', await res.text());
-        return [];
+        console.warn('fetch agent index error:', await res.text());
+        return { agents: [], schemaVersion: 1 };
       }
 
       const data: AgentStoreIndex = await res.json();
 
-      // Get the assistant whitelist from Edge Config
-      const edgeConfig = new EdgeConfig();
+      if (EdgeConfig.isEnabled()) {
+        // Get the assistant whitelist from Edge Config
+        const edgeConfig = new EdgeConfig();
 
-      if (!!appEnv.VERCEL_EDGE_CONFIG) {
-        const assistantWhitelist = await edgeConfig.getAgentWhitelist();
+        const { whitelist, blacklist } = await edgeConfig.getAgentRestrictions();
 
-        if (assistantWhitelist && assistantWhitelist?.length > 0) {
-          data.agents = data.agents.filter((item) => assistantWhitelist.includes(item.identifier));
+        // use whitelist mode first
+        if (whitelist && whitelist?.length > 0) {
+          data.agents = data.agents.filter((item) => whitelist.includes(item.identifier));
+        }
+
+        // if no whitelist, use blacklist mode
+        else if (blacklist && blacklist?.length > 0) {
+          data.agents = data.agents.filter((item) => !blacklist.includes(item.identifier));
         }
       }
 
       return data;
     } catch (e) {
-      console.error('fetch agent index error:', e);
+      // it means failed to fetch
+      if ((e as Error).message.includes('fetch failed')) {
+        return {
+          agents: [],
+          schemaVersion: 1,
+        };
+      }
+
+      console.error('[AgentIndexFetchError] failed to fetch agent index, error detail:');
+      console.error(e);
 
       throw e;
     }

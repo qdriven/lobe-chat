@@ -1,4 +1,5 @@
-import { DiscordIcon, Icon } from '@lobehub/ui';
+import { Hotkey, Icon } from '@lobehub/ui';
+import { DiscordIcon } from '@lobehub/ui/icons';
 import { Badge } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import {
@@ -9,7 +10,6 @@ import {
   Feather,
   FileClockIcon,
   HardDriveDownload,
-  HardDriveUpload,
   LifeBuoy,
   LogOut,
   Mail,
@@ -21,8 +21,11 @@ import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 
 import type { MenuProps } from '@/components/Menu';
+import { enableAuth } from '@/const/auth';
 import { LOBE_CHAT_CLOUD } from '@/const/branding';
+import { DEFAULT_HOTKEY_CONFIG } from '@/const/settings';
 import {
+  CHANGELOG,
   DISCORD,
   DOCUMENTS_REFER_URL,
   EMAIL_SUPPORT,
@@ -31,10 +34,9 @@ import {
   UTM_SOURCE,
   mailTo,
 } from '@/const/url';
-import { isServerMode } from '@/const/version';
+import { isDesktop } from '@/const/version';
 import DataImporter from '@/features/DataImporter';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
-import { configService } from '@/services/config';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -68,24 +70,26 @@ export const useMenu = () => {
   const hasNewVersion = useNewVersion();
   const { t } = useTranslation(['common', 'setting', 'auth']);
   const { showCloudPromotion, hideDocs } = useServerConfigStore(featureFlagsSelectors);
-  const [isLogin, isLoginWithAuth, isLoginWithClerk, openUserProfile] = useUserStore((s) => [
+  const [isLogin, isLoginWithAuth] = useUserStore((s) => [
     authSelectors.isLogin(s),
     authSelectors.isLoginWithAuth(s),
-    authSelectors.isLoginWithClerk(s),
-    s.openUserProfile,
   ]);
 
   const profile: MenuProps['items'] = [
     {
       icon: <Icon icon={CircleUserRound} />,
       key: 'profile',
-      label: t('userPanel.profile'),
-      onClick: () => openUserProfile(),
+      label: <Link href={'/profile'}>{t('userPanel.profile')}</Link>,
     },
   ];
 
   const settings: MenuProps['items'] = [
     {
+      extra: isDesktop ? (
+        <div>
+          <Hotkey keys={DEFAULT_HOTKEY_CONFIG.openSettings} />
+        </div>
+      ) : undefined,
       icon: <Icon icon={Settings2} />,
       key: 'setting',
       label: (
@@ -121,40 +125,8 @@ export const useMenu = () => {
         {
           icon: <Icon icon={HardDriveDownload} />,
           key: 'import',
-          label: <DataImporter>{t('import')}</DataImporter>,
+          label: <DataImporter>{t('importData')}</DataImporter>,
         },
-        isServerMode
-          ? null
-          : {
-              children: [
-                {
-                  key: 'allAgent',
-                  label: t('exportType.allAgent'),
-                  onClick: configService.exportAgents,
-                },
-                {
-                  key: 'allAgentWithMessage',
-                  label: t('exportType.allAgentWithMessage'),
-                  onClick: configService.exportSessions,
-                },
-                {
-                  key: 'globalSetting',
-                  label: t('exportType.globalSetting'),
-                  onClick: configService.exportSettings,
-                },
-                {
-                  type: 'divider',
-                },
-                {
-                  key: 'all',
-                  label: t('exportType.all'),
-                  onClick: configService.exportAll,
-                },
-              ],
-              icon: <Icon icon={HardDriveUpload} />,
-              key: 'export',
-              label: t('export'),
-            },
         {
           type: 'divider',
         },
@@ -173,7 +145,7 @@ export const useMenu = () => {
     {
       icon: <Icon icon={FileClockIcon} />,
       key: 'changelog',
-      label: <Link href={'/changelog/modal'}>{t('changelog')}</Link>,
+      label: <Link href={isDesktop ? CHANGELOG : '/changelog/modal'}>{t('changelog')}</Link>,
     },
     {
       children: [
@@ -227,7 +199,7 @@ export const useMenu = () => {
     {
       type: 'divider',
     },
-    ...(isLoginWithClerk ? profile : []),
+    ...(!enableAuth || (enableAuth && isLoginWithAuth) ? profile : []),
     ...(isLogin ? settings : []),
     /* ↓ cloud slot ↓ */
 
